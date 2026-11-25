@@ -1,0 +1,75 @@
+name: U-Boot experimental build (fogos)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "u-boot/**"
+      - "platform/motorola/fogos/**"
+      - ".github/workflows/uboot-fogos-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  fogos-experimental-build:
+    name: Experimental fogos cross-compile (not hardware validated)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      ALLOW_EXPERIMENTAL: "1"
+      CROSS_COMPILE: aarch64-linux-gnu-
+      JOBS: "2"
+      U_BOOT: ${{ github.workspace }}/build/u-boot-fogos-src
+      U_BOOT_OUT: ${{ github.workspace }}/build/u-boot-fogos
+    steps:
+      - name: Checkout HakiOS integration and fogos board files
+        uses: actions/checkout@v4
+
+      - name: Install U-Boot build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc bison build-essential device-tree-compiler flex \
+            gcc-aarch64-linux-gnu libgnutls28-dev libncurses-dev \
+            libssl-dev make python3 python3-dev python3-pyelftools \
+            python3-setuptools python3-pycryptodome swig
+
+      - name: Verify experimental profile and pinned upstream revision
+        run: |
+          grep -qx 'PROFILE_STATUS=experimental' platform/motorola/fogos/profile.env
+          grep -qx 'UBOOT_DEFCONFIG=motorola_fogos_defconfig' platform/motorola/fogos/profile.env
+          git clone --quiet --depth 1 --branch v2026.07 \
+            https://source.denx.de/u-boot/u-boot.git "$U_BOOT"
+          actual="$(git -C "$U_BOOT" rev-parse HEAD)"
+          expected="ece349ade2973e220f524ce59e59711cc919263f"
+          test "$actual" = "$expected"
+          echo "Pinned U-Boot revision: $actual"
+
+      - name: Build experimental fogos U-Boot
+        run: bash u-boot/build.sh motorola/fogos
+
+      - name: Verify and stage non-bootable experimental artifacts
+        run: |
+          test -s "$U_BOOT_OUT/u-boot"
+          test -s "$U_BOOT_OUT/u-boot.bin"
+          aarch64-linux-gnu-readelf -h "$U_BOOT_OUT/u-boot" | grep -q 'Machine:.*AArch64'
+          mkdir -p artifacts
+          cp "$U_BOOT_OUT/u-boot.bin" artifacts/u-boot-fogos-experimental-NOT-BOOTABLE.bin
+          cp "$U_BOOT_OUT/.config" artifacts/fogos-experimental.config
+          find "$U_BOOT_OUT" -type f -name 'sm6375-motorola-fogos.dtb' -exec cp {} artifacts/ \;
+          sha256sum artifacts/* > artifacts/SHA256SUMS.txt
+          {
+            echo "## Build classification"
+            echo "Experimental fogos U-Boot cross-compile only."
+            echo "Not an Android boot.img, not hardware validated, and NOT for flashing or booting on a phone."
+            echo ""
+            echo "Pinned U-Boot: v2026.07 / ece349ade2973e220f524ce59e59711cc919263f"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload experimental build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: u-boot-fogos-experimental-NOT-BOOTABLE
+          path: artifacts/*
+          if-no-files-found: error

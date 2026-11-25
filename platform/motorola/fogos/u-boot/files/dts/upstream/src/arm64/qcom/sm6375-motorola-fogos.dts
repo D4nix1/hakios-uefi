@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0+
+/dts-v1/;
+
+/*
+ * Experimental U-Boot board description for Motorola Moto G34 5G (fogos).
+ * The live memory map and reserved regions must come from the bootloader's
+ * runtime FDT; this minimal build-time DTS intentionally does not invent RAM.
+ */
+#include "sm6375.dtsi"
+
+/ {
+	model = "Motorola Moto G34 5G";
+	compatible = "motorola,fogos", "qcom,blair", "qcom,sm6375";
+};

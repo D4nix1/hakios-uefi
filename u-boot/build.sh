@@ -20,12 +20,24 @@ if [ ! -f "$PROFILE_DIR/profile.env" ]; then
 	exit 2
 fi
 source "$PROFILE_DIR/profile.env"
+if [[ "${PROFILE_STATUS:-ready}" != "ready" ]]; then
+	if [[ "${PROFILE_STATUS:-}" == "experimental" && "${ALLOW_EXPERIMENTAL:-0}" == "1" ]]; then
+		echo "WARNING: building experimental profile $PROFILE; do not treat this image as boot-tested" >&2
+	else
+		echo "U-Boot: profile $PROFILE is not marked ready (PROFILE_STATUS=${PROFILE_STATUS:-unset}); set ALLOW_EXPERIMENTAL=1 only for an offline experimental build" >&2
+		exit 1
+	fi
+fi
 DEVICE=${PROFILE#*/}
 UB=${U_BOOT:-$UEFI_ROOT/build/u-boot-$DEVICE-src}
-OUT=${U_BOOT_OUT:-$UEFI_ROOT/build/u-boot-$DEVICE}
+if [[ "${IN_TREE_BUILD:-0}" == "1" ]]; then
+	OUT="$UB"
+else
+	OUT=${U_BOOT_OUT:-$UEFI_ROOT/build/u-boot-$DEVICE}
+fi
 JOBS=${JOBS:-}
 
-U_BOOT="$UB" "$HERE/apply.sh" "$PROFILE"
+U_BOOT="$UB" bash "$HERE/apply.sh" "$PROFILE"
 
 if [ -z "${CROSS_COMPILE:-}" ]; then
 	for prefix in aarch64-elf- aarch64-linux-gnu- aarch64-none-elf-; do
@@ -76,14 +88,25 @@ else
 	JOBS=${JOBS:-$(nproc)}
 fi
 
+# MSYS2 process startup is expensive for the per-symbol grep loop in autoconf.mk.
+# The generated Kconfig values are authoritative; duplicate make assignments are harmless.
+if [[ -n "$MSYSTEM" ]]; then
+	export KCONFIG_IGNORE_DUPLICATES=1
+fi
 MAKE=${MAKE:-make}
-"$MAKE" -C "$UB" -s O="$OUT" CROSS_COMPILE="$CROSS_COMPILE" "$UBOOT_DEFCONFIG"
-"$MAKE" -C "$UB" -s O="$OUT" CROSS_COMPILE="$CROSS_COMPILE" -j"$JOBS"
+if [[ "${IN_TREE_BUILD:-0}" == "1" ]]; then
+	echo "build.sh: using disposable in-tree build directory $UB"
+	"$MAKE" -C "$UB" -s CROSS_COMPILE="$CROSS_COMPILE" "$UBOOT_DEFCONFIG"
+	"$MAKE" -C "$UB" -s CROSS_COMPILE="$CROSS_COMPILE" -j"$JOBS"
+else
+	"$MAKE" -C "$UB" -s O="$OUT" CROSS_COMPILE="$CROSS_COMPILE" "$UBOOT_DEFCONFIG"
+	"$MAKE" -C "$UB" -s O="$OUT" CROSS_COMPILE="$CROSS_COMPILE" -j"$JOBS"
+fi
 
 IMAGE="$OUT/u-boot.bin"
 [ -s "$IMAGE" ] || { echo "build.sh: U-Boot did not produce $IMAGE" >&2; exit 1; }
-if [ "$(dd if="$IMAGE" bs=1 count=4 skip=56 2>/dev/null)" != "ARMd" ]; then
-	echo "build.sh: $IMAGE has no AArch64 Linux image header" >&2
+if ! "${CROSS_COMPILE}readelf" -h "$OUT/u-boot" 2>/dev/null | grep -q "Machine:.*AArch64"; then
+	echo "build.sh: $OUT/u-boot is not an AArch64 ELF executable" >&2
 	exit 1
 fi
 ls -lh "$IMAGE"

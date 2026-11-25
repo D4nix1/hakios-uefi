@@ -19,8 +19,15 @@ if [ ! -f "$PROFILE_DIR/profile.env" ]; then
 	echo "apply.sh: no buildable profile at platform/$PROFILE/profile.env" >&2
 	exit 2
 fi
-# Profile files only contain assignments maintained in this repository.
 source "$PROFILE_DIR/profile.env"
+if [[ "${PROFILE_STATUS:-ready}" != "ready" ]]; then
+	if [[ "${PROFILE_STATUS:-}" == "experimental" && "${ALLOW_EXPERIMENTAL:-0}" == "1" ]]; then
+		echo "WARNING: preparing experimental profile $PROFILE; hardware support is unvalidated" >&2
+	else
+		echo "U-Boot: profile $PROFILE is not marked ready (PROFILE_STATUS=${PROFILE_STATUS:-unset}); set ALLOW_EXPERIMENTAL=1 only for an offline experimental build" >&2
+		exit 1
+	fi
+fi
 DEVICE=${PROFILE#*/}
 UB=${U_BOOT:-$UEFI_ROOT/build/u-boot-$DEVICE-src}
 TAG=$(cat "$HERE/BASE")
@@ -42,13 +49,7 @@ if [ "$actual" != "$PIN" ]; then
 	exit 1
 fi
 
-if git -C "$UB" apply --check "$HERE/patches/hakios.patch" 2>/dev/null; then
-	git -C "$UB" apply --whitespace=nowarn "$HERE/patches/hakios.patch"
-elif ! grep -q 'config CMD_HAKIOS' "$UB/cmd/Kconfig" || ! grep -q 'EFI_HAKIOS_USB_DEVICE' "$UB/lib/efi_loader/Kconfig"; then
-	echo "apply.sh: patch does not apply cleanly to the pinned source" >&2
-	exit 1
-fi
-
+python3 "$HERE/rebase_hakios_patch.py" "$UB"
 cp -R "$HERE/files/." "$UB/"
 FAMILY_DIR="$UEFI_ROOT/platform/${PROFILE%%/*}/common/u-boot/files"
 if [ -d "$FAMILY_DIR" ]; then
