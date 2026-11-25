@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # Build U-Boot for a board profile on macOS or Linux.
 set -euo pipefail
 
