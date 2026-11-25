@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 # Build U-Boot for a board profile on macOS or Linux.
 set -euo pipefail
 
@@ -90,7 +90,7 @@ fi
 
 # MSYS2 process startup is expensive for the per-symbol grep loop in autoconf.mk.
 # The generated Kconfig values are authoritative; duplicate make assignments are harmless.
-if [[ -n "$MSYSTEM" ]]; then
+if [[ -n "${MSYSTEM:-}" ]]; then
 	export KCONFIG_IGNORE_DUPLICATES=1
 fi
 MAKE=${MAKE:-make}
