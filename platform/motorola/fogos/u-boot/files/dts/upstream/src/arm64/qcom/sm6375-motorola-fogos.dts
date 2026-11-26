@@ -3,12 +3,46 @@
 
 /*
  * Experimental U-Boot board description for Motorola Moto G34 5G (fogos).
- * The live memory map and reserved regions must come from the bootloader's
- * runtime FDT; this minimal build-time DTS intentionally does not invent RAM.
+ *
+ * Memory map and framebuffer below were read from the live device tree of a
+ * real XT2363-1 (8 GB, UFS 256 GB) in TWRP, /proc/device-tree
+ * (pesquisas/descobertas/device_tree_runtime.txt). Reserved regions (hyp, aop,
+ * xbl_uefi, smem, fw, dfps, wlan, adsp, cdsp, mpss...) already come from the
+ * upstream sm6375.dtsi and match the live addresses.
  */
 #include "sm6375.dtsi"
 
 / {
 	model = "Motorola Moto G34 5G";
 	compatible = "motorola,fogos", "qcom,blair", "qcom,sm6375";
+
+	chosen {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* Continuous splash left by the bootloader: 720x1600, stride 2880 */
+		framebuffer0: framebuffer@85200000 {
+			compatible = "simple-framebuffer";
+			reg = <0x0 0x85200000 0x0 0x00c00000>;
+			width = <720>;
+			height = <1600>;
+			stride = <(720 * 4)>;
+			format = "x8r8g8b8";
+		};
+	};
+
+	reserved-memory {
+		splash_region: splash@85200000 {
+			reg = <0x0 0x85200000 0x0 0x00c00000>;
+			no-map;
+		};
+	};
+};
+
+/* Live /memory/reg (8 GB SKU): 3 banks; the bootloader normally fixes this up */
+&{/memory@80000000} {
+	reg = <0x0 0x80000000 0x0 0x3bb00000>,
+	      <0x1 0x80000000 0x1 0x00000000>,
+	      <0x0 0xc0000000 0x0 0xc0000000>;
 };

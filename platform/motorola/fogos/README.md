@@ -14,7 +14,7 @@ GitHub Actions uses upstream U-Boot v2026.07, applies the shared HakiOS integrat
 
 - No confirmed SM6375/Blair GCC clock/reset driver is included in the pinned U-Boot tree.
 - G34-specific pinctrl/TLMM, PMIC, regulators and early initialization remain incomplete.
-- The minimal DTS declares board identity but intentionally does not invent RAM banks or reserved regions.
+- The DTS now carries the memory banks and the 720x1600 splash framebuffer (0x85200000, stride 2880) measured from the live device tree of a real 8 GB XT2363-1; reserved regions come from the upstream sm6375.dtsi. Still untested on hardware.
 - USB device-controller operation, UFS access and ABL RAM-boot handoff remain unverified.
 - The existing SM6350 clock driver is not assumed compatible with SM6375.
 
