@@ -118,6 +118,7 @@ static int take_payload(const void *data, ulong size)
 {
 	const u32 *head = data;
 	phys_addr_t addr = PAYLOAD_BASE;
+	int ret;
 
 	if (size < 8 || head[0] != XNUP_MAGIC || head[1] > size - 8) {
 		printf("[oosexgang] hakios: not an XNUP payload\n");
@@ -129,11 +130,19 @@ static int take_payload(const void *data, ulong size)
 		return -E2BIG;
 	}
 	/*
-	 * The device tree keeps PAYLOAD_BASE reserved (hakios-payload@f0000000), so this succeeds only on a U-Boot
-	 * that does not: then nothing else took it either.
+	 * Reserve the entire 64 MiB window before touching it. A failed fixed-address allocation means that
+	 * firmware, U-Boot or another reservation owns some of the range; never overwrite it.
+	 * payload_size records a reservation made by this command, so a later reload can reuse it.
 	 */
-	lmb_alloc_mem(LMB_MEM_ALLOC_ADDR, 0, &addr, SZ_64M, LMB_NONE);
-	memcpy(map_sysmem(PAYLOAD_BASE, size), data, size);
+	if (!payload_size) {
+		ret = lmb_alloc_mem(LMB_MEM_ALLOC_ADDR, 0, &addr, SZ_64M, LMB_NONE);
+		if (ret) {
+			printf("[oosexgang] hakios: payload window %#lx..%#lx is unavailable (LMB %d); refusing to overwrite memory\n",
+			    PAYLOAD_BASE, PAYLOAD_BASE + SZ_64M, ret);
+			return ret;
+		}
+	}
+	memmove(map_sysmem(PAYLOAD_BASE, size), data, size);
 	/* the loader runs with its own view of the caches (and the kernel with the MMU off at first) */
 	flush_dcache_range(PAYLOAD_BASE, PAYLOAD_BASE + ALIGN(size, ARCH_DMA_MINALIGN));
 	payload_size = size;

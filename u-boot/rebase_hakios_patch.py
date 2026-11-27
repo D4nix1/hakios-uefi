@@ -86,6 +86,26 @@ insert_before(
     "efi_hakios_usb_register();",
 )
 
+insert_before(
+    "drivers/clk/qcom/Kconfig",
+    "config CLK_QCOM_SM6350\n",
+    '''config CLK_QCOM_SM6375
+\tbool "Qualcomm SM6375 GCC"
+\tselect CLK_QCOM
+\thelp
+\t  Enable the SM6375 (Blair) Global Clock Controller clocks and resets.
+
+''',
+    "config CLK_QCOM_SM6375",
+)
+
+insert_before(
+    "drivers/clk/qcom/Makefile",
+    "obj-$(CONFIG_CLK_QCOM_SM6350) += clock-sm6350.o\n",
+    "obj-$(CONFIG_CLK_QCOM_SM6375) += clock-sm6375.o\n",
+    "obj-$(CONFIG_CLK_QCOM_SM6375)",
+)
+
 # MSYS2/UCRT opens files in text mode unless O_BINARY is requested. fixdep
 # compares read()'s byte count with stat().st_size, so CRLF translation made
 # the host build fail with "fixdep: read: No error".
