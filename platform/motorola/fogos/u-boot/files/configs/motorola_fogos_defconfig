@@ -164,3 +164,27 @@ CONFIG_DM_USB_GADGET=y
 # Disable the legacy ARM arch symlink rule on the Windows/MSYS2 host.
 # The G34 target uses the upstream device tree and does not need this symlink.
 # CONFIG_CREATE_ARCH_SYMLINK is not set
+
+# FOGOS-DEBUG (minimal-drivers experiment): the phone reboots right after U-Boot starts. The SM6375 clock, pin, SMMU, UFS and
+# watchdog blocks are untested from EL1 under the Motorola hypervisor, so no driver that pokes them is built. What stays: the
+# arch timer, PSCI, the simple framebuffer, the USB gadget path the HakiOS command needs, and the EFI loader.
+# Original: pesquisas/descobertas/motorola_fogos_defconfig.bak_antes_min. Revert this block once U-Boot is seen to run.
+# CONFIG_QCOM_HYP_SMMU is not set
+# CONFIG_IOMMU is not set
+# CONFIG_MSM_GPIO is not set
+# CONFIG_QCOM_PMIC_GPIO is not set
+# CONFIG_PINCTRL_QCOM_GENERIC is not set
+# CONFIG_UFS_QCOM is not set
+# CONFIG_UFS is not set
+# CONFIG_MMC_SDHCI_MSM is not set
+# CONFIG_WDT_QCOM is not set
+# CONFIG_SYS_I2C_GENI is not set
+# CONFIG_SYS_I2C_QUP is not set
+# CONFIG_INTERCONNECT_QCOM_RPMH is not set
+# CONFIG_INTERCONNECT_QCOM_SM8650 is not set
+# CONFIG_QCOM_RPMH_POWER_DOMAIN is not set
+# CONFIG_DM_REGULATOR_QCOM_RPMH is not set
+# CONFIG_SPMI_MSM is not set
+# CONFIG_RNG_MSM is not set
+# CONFIG_DWC_ETH_QOS is not set
+# CONFIG_BUTTON_QCOM_PMIC is not set
