@@ -277,6 +277,10 @@ static const struct udevice_id gcc_sm6375_of_match[] = {
 		.compatible = "qcom,sm6375-gcc",
 		.data = (ulong)&sm6375_gcc_data,
 	},
+	{
+		.compatible = "qcom,blair-gcc",
+		.data = (ulong)&sm6375_gcc_data,
+	},
 	{}
 };
 
