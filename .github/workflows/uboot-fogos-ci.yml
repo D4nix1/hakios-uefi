@@ -79,6 +79,8 @@ jobs:
           mkdir -p artifacts
           cp "$U_BOOT_OUT/u-boot.bin" artifacts/u-boot-fogos-experimental-NOT-BOOTABLE.bin
           cp hakios-kernel/arch/arm64/boot/loader.efi artifacts/loader-fogos-placeholder-identity.efi
+          cp "$U_BOOT_OUT/System.map" artifacts/System.map || echo "aviso: sem System.map"
+          cp "$U_BOOT_OUT/u-boot" artifacts/u-boot-fogos-experimental.elf || echo "aviso: sem ELF"
           cp "$U_BOOT_OUT/.config" artifacts/fogos-experimental.config
           find "$U_BOOT_OUT" -type f -name 'sm6375-motorola-fogos.dtb' -exec cp {} artifacts/ \;
           sha256sum artifacts/* > artifacts/SHA256SUMS.txt
